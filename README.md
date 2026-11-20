@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.jpg" alt="zero-to-life logo" width="132" />
+<img src="assets/logo.png" alt="zero-to-life logo" width="140" />
 
 # ZERO → LIFE
 
