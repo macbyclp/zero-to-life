@@ -658,24 +658,32 @@
               <label class="field-label">Sağlayıcı</label>
               <select id="cfgProvider" style="width:100%;" onchange="onProviderPreset()">
                 <option value="demo">Demo Heuristik (API Anahtarsız)</option>
+                <option value="claude-cli">Claude Code CLI (Abonelik · CMD)</option>
+                <option value="gemini-cli">Gemini CLI (Abonelik · CMD)</option>
+                <option value="codex-cli">Codex CLI (Abonelik · CMD)</option>
+                <option value="custom-cli">Özel CMD / CLI Komutu</option>
                 <option value="ollama">Ollama (Yerel LLM)</option>
-                <option value="openai">OpenAI / OpenRouter / Groq</option>
-                <option value="gemini">Google Gemini API</option>
+                <option value="openai">OpenAI / OpenRouter / Groq (API)</option>
+                <option value="gemini">Google Gemini (API)</option>
               </select>
             </div>
             <div class="form-row">
               <div>
-                <label class="field-label">Model</label>
-                <input id="cfgModel" style="width:100%;" placeholder="qwen2.5:7b" />
+                <label class="field-label">Model (opsiyonel)</label>
+                <input id="cfgModel" style="width:100%;" placeholder="default veya qwen2.5:7b" />
               </div>
+            </div>
+            <div>
+              <label class="field-label">CMD / CLI Komutu (Abonelik Modları için)</label>
+              <input id="cfgCliCmd" style="width:100%;" placeholder="claude -p | gemini -p &quot;&quot; | codex exec -" />
             </div>
             <div>
               <label class="field-label">Base URL (Ollama / OpenAI-uyumlu)</label>
               <input id="cfgBaseUrl" style="width:100%;" placeholder="http://127.0.0.1:11434" />
             </div>
             <div>
-              <label class="field-label">API Anahtarı (yalnızca bellek içi)</label>
-              <input id="cfgApiKey" type="password" style="width:100%;" placeholder="sk-... veya AIza..." />
+              <label class="field-label">API Anahtarı (yalnızca API modları için)</label>
+              <input id="cfgApiKey" type="password" style="width:100%;" placeholder="Abonelik CLI modunda boş bırak" />
             </div>
             <button class="primary" onclick="saveConfig()">AI AYARINI UYGULA</button>
           </div>
@@ -860,6 +868,7 @@
         document.getElementById('cfgProvider').value = llm_config.provider;
         document.getElementById('cfgModel').value = llm_config.model;
         document.getElementById('cfgBaseUrl').value = llm_config.base_url;
+        document.getElementById('cfgCliCmd').value = llm_config.cli_command || '';
         configInitialized = true;
       }
     }
@@ -868,17 +877,38 @@
       const p = document.getElementById('cfgProvider').value;
       const modelEl = document.getElementById('cfgModel');
       const urlEl = document.getElementById('cfgBaseUrl');
-      if (p === 'ollama') {
+      const cliEl = document.getElementById('cfgCliCmd');
+      if (p === 'claude-cli') {
+        modelEl.value = 'default';
+        cliEl.value = 'claude -p';
+        urlEl.value = '';
+      } else if (p === 'gemini-cli') {
+        modelEl.value = 'default';
+        cliEl.value = 'gemini -p ""';
+        urlEl.value = '';
+      } else if (p === 'codex-cli') {
+        modelEl.value = 'default';
+        cliEl.value = 'codex exec -';
+        urlEl.value = '';
+      } else if (p === 'custom-cli') {
+        modelEl.value = 'default';
+        cliEl.value = 'claude -p';
+        urlEl.value = '';
+      } else if (p === 'ollama') {
         modelEl.value = 'qwen2.5:7b';
+        cliEl.value = '';
         urlEl.value = 'http://127.0.0.1:11434';
       } else if (p === 'openai') {
         modelEl.value = 'gpt-4o-mini';
+        cliEl.value = '';
         urlEl.value = 'https://api.openai.com/v1';
       } else if (p === 'gemini') {
         modelEl.value = 'gemini-2.0-flash';
+        cliEl.value = '';
         urlEl.value = 'https://generativelanguage.googleapis.com';
       } else {
         modelEl.value = 'heuristic-v1';
+        cliEl.value = '';
         urlEl.value = '';
       }
     }
@@ -909,6 +939,7 @@
         provider: document.getElementById('cfgProvider').value,
         model: document.getElementById('cfgModel').value.trim(),
         base_url: document.getElementById('cfgBaseUrl').value.trim(),
+        cli_command: document.getElementById('cfgCliCmd').value.trim(),
         api_key: document.getElementById('cfgApiKey').value.trim() || null
       };
       await fetch('/api/config', {

@@ -2,14 +2,19 @@ use crate::simulation::{housing_catalog, job_catalog, AgentDecision, SimulationS
 use crate::world_data::WorldSnapshot;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::process::Stdio;
 use std::time::Duration;
+use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmConfig {
-    /// "demo" | "ollama" | "openai" | "gemini"
+    /// "demo" | "claude-cli" | "gemini-cli" | "codex-cli" | "custom-cli" | "ollama" | "openai" | "gemini"
     pub provider: String,
     pub model: String,
     pub base_url: String,
+    #[serde(default)]
+    pub cli_command: String,
     #[serde(default)]
     pub api_key: String,
 }
@@ -21,6 +26,7 @@ impl Default for LlmConfig {
             model: std::env::var("SIM_MODEL").unwrap_or_else(|_| "qwen2.5:7b".to_string()),
             base_url: std::env::var("SIM_BASE_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:11434".to_string()),
+            cli_command: std::env::var("SIM_CLI_CMD").unwrap_or_default(),
             api_key: std::env::var("SIM_API_KEY").unwrap_or_default(),
         }
     }
@@ -47,32 +53,141 @@ impl AgentBrain {
     ) -> (AgentDecision, String) {
         let provider = config.provider.trim().to_lowercase();
         match provider.as_str() {
+            "claude-cli" => match self.call_subscription_cli("claude-cli", config, state, world).await {
+                Ok(d) => (d, "Claude Code CLI (Abonelik)".to_string()),
+                Err(e) => fallback_with_note(state, world, "Claude CLI", &e),
+            },
+            "gemini-cli" => match self.call_subscription_cli("gemini-cli", config, state, world).await {
+                Ok(d) => (d, "Gemini CLI (Abonelik)".to_string()),
+                Err(e) => fallback_with_note(state, world, "Gemini CLI", &e),
+            },
+            "codex-cli" => match self.call_subscription_cli("codex-cli", config, state, world).await {
+                Ok(d) => (d, "Codex CLI (Abonelik)".to_string()),
+                Err(e) => fallback_with_note(state, world, "Codex CLI", &e),
+            },
+            "custom-cli" | "cli" => match self.call_subscription_cli("custom-cli", config, state, world).await {
+                Ok(d) => (d, format!("Özel CLI ({})", config.cli_command)),
+                Err(e) => fallback_with_note(state, world, "Özel CLI", &e),
+            },
             "ollama" => match self.call_ollama(config, state, world).await {
                 Ok(d) => (d, format!("Ollama ({})", config.model)),
-                Err(e) => {
-                    let mut d = heuristic_decide(state, world);
-                    d.thought = format!("{} [Not: Ollama erişilemedi: {}]", d.thought, e);
-                    (d, "Demo Fallback (Ollama Hatası)".to_string())
-                }
+                Err(e) => fallback_with_note(state, world, "Ollama", &e),
             },
             "openai" => match self.call_openai_compat(config, state, world).await {
                 Ok(d) => (d, format!("OpenAI-Compat ({})", config.model)),
-                Err(e) => {
-                    let mut d = heuristic_decide(state, world);
-                    d.thought = format!("{} [Not: OpenAI API hatası: {}]", d.thought, e);
-                    (d, "Demo Fallback (API Hatası)".to_string())
-                }
+                Err(e) => fallback_with_note(state, world, "OpenAI API", &e),
             },
             "gemini" => match self.call_gemini(config, state, world).await {
-                Ok(d) => (d, format!("Gemini ({})", config.model)),
-                Err(e) => {
-                    let mut d = heuristic_decide(state, world);
-                    d.thought = format!("{} [Not: Gemini API hatası: {}]", d.thought, e);
-                    (d, "Demo Fallback (Gemini Hatası)".to_string())
-                }
+                Ok(d) => (d, format!("Gemini API ({})", config.model)),
+                Err(e) => fallback_with_note(state, world, "Gemini API", &e),
             },
             _ => (heuristic_decide(state, world), "Demo Heuristik Beyin".to_string()),
         }
+    }
+
+    /// Runs subscription-based local CLI agents (Claude Code, Gemini CLI, Codex CLI, or custom CMD)
+    /// without needing raw API keys. Pipes the full prompt over stdin to safely support Turkish UTF-8
+    /// and avoid Windows command-line length/escaping limits.
+    async fn call_subscription_cli(
+        &self,
+        kind: &str,
+        config: &LlmConfig,
+        state: &SimulationState,
+        world: &WorldSnapshot,
+    ) -> Result<AgentDecision, String> {
+        let (system, user) = Self::build_prompts(state, world);
+        let combined_prompt = format!("{}\n\n{}\n", system, user);
+
+        let cmd_str = match kind {
+            "claude-cli" => {
+                if !config.cli_command.trim().is_empty() {
+                    config.cli_command.trim().to_string()
+                } else if !config.model.trim().is_empty() && config.model != "default" {
+                    format!("claude -p --model {}", config.model.trim())
+                } else {
+                    "claude -p".to_string()
+                }
+            }
+            "gemini-cli" => {
+                if !config.cli_command.trim().is_empty() {
+                    config.cli_command.trim().to_string()
+                } else if !config.model.trim().is_empty() && config.model != "default" {
+                    format!("gemini -m {} -p \"\"", config.model.trim())
+                } else {
+                    "gemini -p \"\"".to_string()
+                }
+            }
+            "codex-cli" => {
+                if !config.cli_command.trim().is_empty() {
+                    config.cli_command.trim().to_string()
+                } else if !config.model.trim().is_empty() && config.model != "default" {
+                    format!("codex exec -m {} -", config.model.trim())
+                } else {
+                    "codex exec -".to_string()
+                }
+            }
+            _ => {
+                let c = config.cli_command.trim();
+                if c.is_empty() {
+                    return Err("Özel CLI komutu boş".to_string());
+                }
+                c.to_string()
+            }
+        };
+
+        let mut command = if cfg!(target_os = "windows") {
+            let mut c = Command::new("cmd");
+            c.args(["/C", &cmd_str]);
+            c
+        } else {
+            let mut c = Command::new("sh");
+            c.args(["-c", &cmd_str]);
+            c
+        };
+
+        command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true);
+
+        let mut child = command
+            .spawn()
+            .map_err(|e| format!("Komut başlatılamadı ('{}'): {}", cmd_str, e))?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(combined_prompt.as_bytes())
+                .await
+                .map_err(|e| format!("stdin yazma hatası: {}", e))?;
+            drop(stdin);
+        }
+
+        let output = tokio::time::timeout(Duration::from_secs(45), child.wait_with_output())
+            .await
+            .map_err(|_| "CLI zaman aşımı (45s)".to_string())?
+            .map_err(|e| format!("CLI çalıştırma hatası: {}", e))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+        if !output.status.success() && stdout.is_empty() {
+            let err_short: String = stderr.chars().take(160).collect();
+            return Err(format!(
+                "Çıkış kodu {}: {}",
+                output.status.code().unwrap_or(-1),
+                if err_short.is_empty() {
+                    "Komut bulunamadı veya oturum açılmamış".to_string()
+                } else {
+                    err_short
+                }
+            ));
+        }
+
+        parse_decision_json(&stdout).map_err(|_| {
+            let preview: String = stdout.chars().take(140).collect();
+            format!("JSON çözülemedi. Çıktı: {}", preview)
+        })
     }
 
     fn build_prompts(state: &SimulationState, world: &WorldSnapshot) -> (String, String) {
@@ -337,12 +452,23 @@ SADECE geçerli bir JSON nesnesi döndür, başka hiçbir açıklama veya markdo
     }
 }
 
+fn fallback_with_note(
+    state: &SimulationState,
+    world: &WorldSnapshot,
+    source: &str,
+    err: &str,
+) -> (AgentDecision, String) {
+    let mut d = heuristic_decide(state, world);
+    d.thought = format!("{} [Not: {} erişilemedi: {}]", d.thought, source, err);
+    (d, format!("Demo Fallback ({} Hatası)", source))
+}
+
 fn parse_decision_json(raw: &str) -> Result<AgentDecision, String> {
     let trimmed = raw.trim();
     if let Ok(d) = serde_json::from_str::<AgentDecision>(trimmed) {
         return Ok(d);
     }
-    // Extract first {...} block if wrapped in markdown fences
+    // Extract first {...} block if wrapped in markdown fences or CLI logs
     if let (Some(start), Some(end)) = (trimmed.find('{'), trimmed.rfind('}')) {
         if end > start {
             let slice = &trimmed[start..=end];
@@ -354,8 +480,6 @@ fn parse_decision_json(raw: &str) -> Result<AgentDecision, String> {
     Err("JSON ayrıştırılamadı".to_string())
 }
 
-/// Built-in autonomous heuristic brain so the simulation works out-of-the-box without API keys.
-/// Reacts to real-world weather, USD/TRY, news, housing deadlines, vitals, and long-term career goals.
 fn heuristic_decide(state: &SimulationState, world: &WorldSnapshot) -> AgentDecision {
     let fx = world.market.usd_try;
     let temp = world.weather.temperature_c;
@@ -363,7 +487,6 @@ fn heuristic_decide(state: &SimulationState, world: &WorldSnapshot) -> AgentDeci
     let jobs = job_catalog(fx);
     let housings = housing_catalog(fx);
 
-    // 1. Critical survival checks
     if state.vitals.satiety < 32.0 && state.cash_try >= 380.0 {
         return AgentDecision {
             thought: format!(
@@ -389,7 +512,6 @@ fn heuristic_decide(state: &SimulationState, world: &WorldSnapshot) -> AgentDeci
         };
     }
 
-    // 2. If unemployed, immediately apply for the best qualifying job
     if state.job_id == "unemployed" {
         return AgentDecision {
             thought: format!(
@@ -404,7 +526,6 @@ fn heuristic_decide(state: &SimulationState, world: &WorldSnapshot) -> AgentDeci
         };
     }
 
-    // 3. Check if we qualify for a better job!
     let current_pay = jobs
         .iter()
         .find(|j| j.id == state.job_id)
@@ -432,7 +553,6 @@ fn heuristic_decide(state: &SimulationState, world: &WorldSnapshot) -> AgentDeci
         };
     }
 
-    // 4. Housing upgrades
     if state.housing_id == "couch" && state.days_in_housing >= 5 && state.cash_try >= 1_200.0 {
         return AgentDecision {
             thought: "Arkadaşımın koltuğunda son günlerim. Kimseye yük olmadan önce pansiyona geçip kendi düzenimi kurmalıyım.".to_string(),
@@ -477,7 +597,6 @@ fn heuristic_decide(state: &SimulationState, world: &WorldSnapshot) -> AgentDeci
         }
     }
 
-    // 5. Real-world market investment when cash buffer is healthy
     if state.cash_try >= 18_000.0 && state.day % 6 == 0 {
         let (asset, reason) = if world.market.btc_24h_change < -2.0 {
             ("btc", "Bitcoin son 24 saatte geri çekilmiş, küçük bir miktar risk alabilirim")
@@ -500,7 +619,6 @@ fn heuristic_decide(state: &SimulationState, world: &WorldSnapshot) -> AgentDeci
         };
     }
 
-    // 6. Mood check -> socialize
     if state.vitals.mood < 38.0 && state.cash_try > 1_000.0 {
         return AgentDecision {
             thought: "Sadece çalışmakla kafam dağılmıyor, biraz insan içine çıkıp yeni çevre edinmem gerek.".to_string(),
@@ -512,7 +630,6 @@ fn heuristic_decide(state: &SimulationState, world: &WorldSnapshot) -> AgentDeci
         };
     }
 
-    // 7. Alternate between working and studying to climb the ladder
     let need_cash = state.cash_try < 6_500.0;
     if !need_cash && state.day % 3 == 0 {
         let (skill, skill_tr) = if state.skills.coding < 33.0 {
@@ -545,7 +662,6 @@ fn heuristic_decide(state: &SimulationState, world: &WorldSnapshot) -> AgentDeci
         };
     }
 
-    // Default: Work
     AgentDecision {
         thought: format!(
             "İstanbul'da hava {:.0}°C ({}). Bugün {} işimde mesai yapıp nakit tamponumu güçlendireceğim.",

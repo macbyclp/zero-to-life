@@ -37,6 +37,7 @@ struct LlmConfigPublic {
     provider: String,
     model: String,
     base_url: String,
+    cli_command: String,
     has_api_key: bool,
 }
 
@@ -46,6 +47,7 @@ impl From<&LlmConfig> for LlmConfigPublic {
             provider: c.provider.clone(),
             model: c.model.clone(),
             base_url: c.base_url.clone(),
+            cli_command: c.cli_command.clone(),
             has_api_key: !c.api_key.trim().is_empty(),
         }
     }
@@ -137,6 +139,8 @@ struct ConfigUpdateRequest {
     provider: String,
     model: String,
     base_url: String,
+    #[serde(default)]
+    cli_command: String,
     api_key: Option<String>,
 }
 
@@ -284,6 +288,7 @@ async fn post_config(
         eng.llm_config.provider = req.provider;
         eng.llm_config.model = req.model;
         eng.llm_config.base_url = req.base_url;
+        eng.llm_config.cli_command = req.cli_command;
         if let Some(key) = req.api_key {
             if !key.trim().is_empty() {
                 eng.llm_config.api_key = key.trim().to_string();
