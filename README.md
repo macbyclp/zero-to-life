@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Rust-1.80%2B-0038A8?style=for-the-badge&logo=rust&logoColor=white" alt="Rust" />
   <img src="https://img.shields.io/badge/Axum-WebSocket-0038A8?style=for-the-badge&logo=rocket&logoColor=white" alt="Axum" />
   <img src="https://img.shields.io/badge/Sandbox-Read--Only-002575?style=for-the-badge&logo=shield&logoColor=white" alt="Read-Only Sandbox" />
-  <img src="https://img.shields.io/badge/CLI_Abonelik-Claude_%7C_Gemini_%7C_Codex-1F57C9?style=for-the-badge&logo=gnubash&logoColor=white" alt="Subscription CLI" />
+  <img src="https://img.shields.io/badge/CLI_Abonelik-agy_%7C_Claude_%7C_Gemini_%7C_Codex-1F57C9?style=for-the-badge&logo=gnubash&logoColor=white" alt="Subscription CLI" />
   <img src="https://img.shields.io/badge/Şehir-İstanbul_🇹🇷-0038A8?style=for-the-badge" alt="Istanbul" />
 </p>
 
@@ -33,6 +33,16 @@
 > *İş bulacak mı? Barınma krizini nasıl aşacak? Kuryelikten remote yazılımcılığa ve kendi girişimine çıkabilecek mi? Yoksa yorgunluk, enflasyon ve yanlış kararlar yüzünden tökezleyecek mi?*
 
 Simülasyonu çalıştıran operatör, tüm bu süreci **canlı WebSocket arayüzünden** saniye saniye izleyebilir, hızlandırabilir, duraklatabilir, AI modelini canlı değiştirebilir ve ajanın tepkisini ölçmek için **beklenmedik hayat olayları enjekte edebilir**.
+
+---
+
+## 🖥️ Canlı Arayüz Önizlemesi
+
+<div align="center">
+  <img src="assets/dashboard.png" alt="zero-to-life canlı web dashboard önizlemesi" width="100%" />
+  <br />
+  <sub>Monokrom kobalt mavi risograph estetiğinde canlı WebSocket takip paneli: gerçek dünya verileri (<code>● CANLI</code>), SVG net değer grafiği, vitaller, yetenekler ve ajanın günlük iç sesi.</sub>
+</div>
 
 ---
 
@@ -90,6 +100,7 @@ Simülasyon, prompt'u güvenli bir şekilde `stdin` üzerinden UTF-8 olarak ilet
 
 | Mod (`SIM_PROVIDER`) | Kullanılan Varsayılan Komut | Gerekli Kurulum |
 | :--- | :--- | :--- |
+| **`agy-cli`** | `agy -p --disable-slash-commands` | Antigravity CLI (`agy`) kurulu ve oturumu açık olmalı |
 | **`claude-cli`** | `claude -p` | Claude Code CLI kurulu ve oturumu açık olmalı |
 | **`gemini-cli`** | `gemini -p ""` | Gemini CLI kurulu ve Google hesabıyla giriş yapılmış olmalı |
 | **`codex-cli`** | `codex exec -` | OpenAI Codex CLI kurulu ve oturumu açık olmalı |
@@ -104,7 +115,11 @@ Simülasyon, prompt'u güvenli bir şekilde `stdin` üzerinden UTF-8 olarak ilet
 # 1. API anahtarsız Demo modunda hemen başlat:
 cargo run
 
-# 2. Claude Code aboneliğinle başlat:
+# 2. Antigravity CLI (agy) aboneliğinle başlat:
+$env:SIM_PROVIDER="agy-cli"
+cargo run
+
+# 3. Claude Code aboneliğinle başlat:
 $env:SIM_PROVIDER="claude-cli"
 cargo run
 
@@ -190,8 +205,9 @@ Web arayüzünden ajanın gerçek tepkisini test etmek için anlık olaylar gön
 ```text
 zero-to-life/
 ├── assets/
-│   ├── logo.jpg            # Monokrom kobalt mavi risograph amblem
-│   └── banner.jpg          # İstanbul silüetli hero kapak illüstrasyonu
+│   ├── logo.png            # Şeffaf arka planlı kobalt mavi risograph amblem
+│   ├── banner.jpg          # AI ajan & İstanbul silüetli hero kapak illüstrasyonu
+│   └── dashboard.png       # Canlı Web Dashboard ekran görüntüsü
 ├── src/
 │   ├── main.rs             # Axum sunucusu, WebSocket yayını ve simülasyon döngüsü
 │   ├── simulation.rs       # 18 yaş yaşam, ekonomi, kira, kariyer ve portföy motoru

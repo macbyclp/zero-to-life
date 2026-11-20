@@ -658,6 +658,7 @@
               <label class="field-label">Sağlayıcı</label>
               <select id="cfgProvider" style="width:100%;" onchange="onProviderPreset()">
                 <option value="demo">Demo Heuristik (API Anahtarsız)</option>
+                <option value="agy-cli">Antigravity CLI (agy · Abonelik)</option>
                 <option value="claude-cli">Claude Code CLI (Abonelik · CMD)</option>
                 <option value="gemini-cli">Gemini CLI (Abonelik · CMD)</option>
                 <option value="codex-cli">Codex CLI (Abonelik · CMD)</option>
@@ -878,7 +879,11 @@
       const modelEl = document.getElementById('cfgModel');
       const urlEl = document.getElementById('cfgBaseUrl');
       const cliEl = document.getElementById('cfgCliCmd');
-      if (p === 'claude-cli') {
+      if (p === 'agy-cli') {
+        modelEl.value = 'default';
+        cliEl.value = 'agy -p --disable-slash-commands';
+        urlEl.value = '';
+      } else if (p === 'claude-cli') {
         modelEl.value = 'default';
         cliEl.value = 'claude -p';
         urlEl.value = '';

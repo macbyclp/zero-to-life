@@ -9,7 +9,7 @@ use tokio::process::Command;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmConfig {
-    /// "demo" | "claude-cli" | "gemini-cli" | "codex-cli" | "custom-cli" | "ollama" | "openai" | "gemini"
+    /// "demo" | "agy-cli" | "claude-cli" | "gemini-cli" | "codex-cli" | "custom-cli" | "ollama" | "openai" | "gemini"
     pub provider: String,
     pub model: String,
     pub base_url: String,
@@ -53,6 +53,10 @@ impl AgentBrain {
     ) -> (AgentDecision, String) {
         let provider = config.provider.trim().to_lowercase();
         match provider.as_str() {
+            "agy-cli" | "agy" => match self.call_subscription_cli("agy-cli", config, state, world).await {
+                Ok(d) => (d, "Antigravity CLI (agy · Abonelik)".to_string()),
+                Err(e) => fallback_with_note(state, world, "Antigravity CLI (agy)", &e),
+            },
             "claude-cli" => match self.call_subscription_cli("claude-cli", config, state, world).await {
                 Ok(d) => (d, "Claude Code CLI (Abonelik)".to_string()),
                 Err(e) => fallback_with_note(state, world, "Claude CLI", &e),
@@ -99,6 +103,15 @@ impl AgentBrain {
         let combined_prompt = format!("{}\n\n{}\n", system, user);
 
         let cmd_str = match kind {
+            "agy-cli" => {
+                if !config.cli_command.trim().is_empty() {
+                    config.cli_command.trim().to_string()
+                } else if !config.model.trim().is_empty() && config.model != "default" {
+                    format!("agy -p --disable-slash-commands --model {}", config.model.trim())
+                } else {
+                    "agy -p --disable-slash-commands".to_string()
+                }
+            }
             "claude-cli" => {
                 if !config.cli_command.trim().is_empty() {
                     config.cli_command.trim().to_string()
