@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZERO → LIFE // 18 Yaş Otonom AI Sandbox</title>
+  <style>
+    :root {
+      --paper: #f6f7fb;
+      --paper-card: #fcfdff;
+      --cobalt: #0038a8;
+      --cobalt-deep: #002575;
+      --cobalt-mid: #1f57c9;
+      --cobalt-soft: rgba(0, 56, 168, 0.08);
+      --cobalt-tint: rgba(0, 56, 168, 0.14);
+      --border: #0038a8;
+      --mono: "Cascadia Mono", "JetBrains Mono", "Consolas", ui-monospace, monospace;
+      --sans: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--paper);
+      background-image: radial-gradient(rgba(0, 56, 168, 0.13) 1px, transparent 1px);
+      background-size: 16px 16px;
+      color: var(--cobalt-deep);
+      font-family: var(--sans);
+      line-height: 1.45;
+      min-height: 100vh;
+    }
+
+    /* Risograph halftone accent strip */
+    .halftone-bar {
+      height: 8px;
+      background-image: radial-gradient(var(--cobalt) 1.4px, transparent 1.4px);
+      background-size: 5px 5px;
+      border-bottom: 1.5px solid var(--cobalt);
+    }
+
+    header {
+      background: var(--paper-card);
+      border-bottom: 2px solid var(--cobalt);
+      padding: 14px 22px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border: 2px solid var(--cobalt);
+      background:
+        radial-gradient(var(--cobalt) 1.2px, transparent 1.2px) 0 0 / 5px 5px,
+        var(--paper);
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--cobalt-deep);
+      box-shadow: 3px 3px 0 var(--cobalt);
+    }
+
+    .brand h1 {
+      font-family: var(--mono);
+      font-size: 18px;
+      letter-spacing: 0.04em;
+      color: var(--cobalt);
+    }
+
+    .brand .sub {
+      font-size: 12px;
+      font-family: var(--mono);
+      opacity: 0.8;
+    }
+
+    .clock-strip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border: 1.5px solid var(--cobalt);
+      background: var(--paper-card);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .pill.solid {
+      background: var(--cobalt);
+      color: #ffffff;
+    }
+
+    .pill .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--cobalt);
+    }
+
+    .pill.solid .dot {
+      background: #ffffff;
+      animation: pulse 1.6s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button, select, input {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--cobalt-deep);
+      background: var(--paper-card);
+      border: 1.5px solid var(--cobalt);
+      padding: 7px 12px;
+      outline: none;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
+      box-shadow: 2px 2px 0 var(--cobalt);
+    }
+
+    button:hover {
+      background: var(--cobalt-soft);
+    }
+
+    button:active {
+      transform: translate(2px, 2px);
+      box-shadow: none;
+    }
+
+    button.primary {
+      background: var(--cobalt);
+      color: #ffffff;
+    }
+
+    button.primary:hover {
+      background: var(--cobalt-deep);
+    }
+
+    .status-ticker {
+      background: var(--cobalt);
+      color: #ffffff;
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 7px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    main {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 18px 20px 36px;
+      display: grid;
+      grid-template-columns: 330px minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 1180px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--paper-card);
+      border: 1.5px solid var(--cobalt);
+      box-shadow: 4px 4px 0 rgba(0, 56, 168, 0.22);
+    }
+
+    .card-head {
+      padding: 10px 14px;
+      border-bottom: 1.5px solid var(--cobalt);
+      background:
+        radial-gradient(rgba(0, 56, 168, 0.14) 1px, transparent 1px) 0 0 / 6px 6px,
+        var(--paper);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--cobalt);
+    }
+
+    .card-body {
+      padding: 14px;
+    }
+
+    /* Agent profile */
+    .persona-top {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .avatar {
+      width: 56px;
+      height: 56px;
+      flex-shrink: 0;
+      border: 2px solid var(--cobalt);
+      background:
+        radial-gradient(var(--cobalt) 1.5px, transparent 1.5px) 0 0 / 5px 5px,
+        #e8eefc;
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--cobalt-deep);
+    }
+
+    .persona-name {
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .persona-meta {
+      font-size: 12px;
+      opacity: 0.85;
+    }
+
+    .kv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .kv-box {
+      border: 1px solid rgba(0, 56, 168, 0.35);
+      background: var(--paper);
+      padding: 8px 10px;
+    }
+
+    .kv-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      opacity: 0.75;
+    }
+
+    .kv-val {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--cobalt);
+      margin-top: 2px;
+    }
+
+    .portfolio-row {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(0, 56, 168, 0.35);
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 11px;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* Progress bars */
+    .bar-row {
+      margin-bottom: 10px;
+    }
+    .bar-row:last-child { margin-bottom: 0; }
+    .bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 11px;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+    .bar-track {
+      height: 10px;
+      border: 1px solid var(--cobalt);
+      background: var(--paper);
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background:
+        repeating-linear-gradient(
+          -45deg,
+          var(--cobalt),
+          var(--cobalt) 4px,
+          var(--cobalt-mid) 4px,
+          var(--cobalt-mid) 8px
+        );
+      transition: width 0.3s ease;
+    }
+
+    /* Chart */
+    .chart-wrap {
+      width: 100%;
+      height: 170px;
+      position: relative;
+    }
+
+    .chart-wrap svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Journal / Thought Stream */
+    .journal-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 680px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .entry {
+      border: 1.5px solid var(--cobalt);
+      background: var(--paper);
+      padding: 12px 14px;
+    }
+
+    .entry.latest {
+      background: #edf2ff;
+      box-shadow: 3px 3px 0 var(--cobalt);
+    }
+
+    .entry-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed rgba(0, 56, 168, 0.35);
+    }
+
+    .entry-thought {
+      font-size: 14px;
+      font-style: italic;
+      color: var(--cobalt-deep);
+      margin-bottom: 8px;
+    }
+
+    .entry-outcome {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: var(--paper-card);
+      border-left: 3px solid var(--cobalt);
+      padding: 6px 10px;
+      margin-bottom: 6px;
+    }
+
+    .entry-foot {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    /* Real world news */
+    .news-item {
+      padding: 7px 0;
+      border-bottom: 1px dashed rgba(0, 56, 168, 0.28);
+      font-size: 12px;
+    }
+    .news-item:last-child { border-bottom: none; }
+    .news-src {
+      font-family: var(--mono);
+      font-size: 10px;
+      opacity: 0.7;
+      text-transform: uppercase;
+    }
+
+    /* Milestones */
+    .milestone-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 190px;
+      overflow-y: auto;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+    .milestone-list li {
+      padding-left: 10px;
+      border-left: 2px solid var(--cobalt);
+    }
+
+    /* Forms */
+    .form-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .form-row {
+      display: flex;
+      gap: 8px;
+    }
+    .form-row > * { flex: 1; min-width: 0; }
+    .field-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 3px;
+      display: block;
+    }
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .preset-row button {
+      font-size: 11px;
+      padding: 5px 8px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 30px 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      opacity: 0.75;
+    }
+  </style>
+</head>
+<body>
+  <div class="halftone-bar"></div>
+  <header>
+    <div class="brand">
+      <div class="brand-mark">18→</div>
+      <div>
+        <h1>ZERO → LIFE // SANDBOX</h1>
+        <div class="sub">SALT-OKUNUR GERÇEK DÜNYA · OTONOM AI YAŞAM SİMÜLASYONU</div>
+      </div>
+    </div>
+
+    <div class="clock-strip">
+      <span class="pill solid" id="wsBadge"><span class="dot"></span>BAĞLANIYOR</span>
+      <span class="pill" id="ageBadge">YAŞ 18 · GÜN 0</span>
+      <span class="pill" id="dateBadge">2026-01-01</span>
+      <span class="pill" id="providerBadge">BEYİN: DEMO</span>
+    </div>
+
+    <div class="controls">
+      <button class="primary" id="btnToggle" onclick="toggleRun()">▶ BAŞLAT</button>
+      <button onclick="sendControl('step')">+1 GÜN</button>
+      <select id="speedSelect" onchange="changeSpeed(this.value)">
+        <option value="3500">Yavaş (3.5s)</option>
+        <option value="2600" selected>Normal (2.6s)</option>
+        <option value="1200">Hızlı (1.2s)</option>
+        <option value="650">Turbo (0.65s)</option>
+      </select>
+      <button onclick="sendControl('reset')">↺ SIFIRLA</button>
+    </div>
+  </header>
+
+  <div class="status-ticker">
+    <div id="statusBanner">Simülasyon hazır. "BAŞLAT" veya "+1 GÜN" ile 18 yaşındaki ajanı hayata bırakın.</div>
+    <div>SANDBOX MODU: YALNIZCA OKUMA (READ-ONLY) · DIŞ DÜNYAYA YAZMA KAPALI</div>
+  </div>
+
+  <main>
+    <!-- LEFT COLUMN: AGENT PROFILE, VITALS, SKILLS, MILESTONES -->
+    <section class="col">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Ajan Kimliği &amp; Finans</span>
+          <span class="pill" id="aliveBadge">AKTİF</span>
+        </div>
+        <div class="card-body">
+          <div class="persona-top">
+            <div class="avatar" id="avatarAge">18</div>
+            <div>
+              <div class="persona-name" id="agentName">Deniz (18)</div>
+              <div class="persona-meta" id="agentLocation">İstanbul · İşsiz</div>
+              <div class="persona-meta" id="agentHousing">Barınma: Arkadaş Koltuğu</div>
+            </div>
+          </div>
+
+          <div class="kv-grid">
+            <div class="kv-box">
+              <div class="kv-label">Nakit (TL)</div>
+              <div class="kv-val" id="cashVal">2.500 ₺</div>
+            </div>
+            <div class="kv-box">
+              <div class="kv-label">Toplam Net Değer</div>
+              <div class="kv-val" id="netWorthVal">2.500 ₺</div>
+            </div>
+          </div>
+
+          <div class="portfolio-row">
+            <span>USD: <strong id="pUsd">0.00</strong></span>
+            <span>Altın: <strong id="pGold">0.00g</strong></span>
+            <span>BTC: <strong id="pBtc">0.0000</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Vitaller</span>
+        </div>
+        <div class="card-body" id="vitalsBox"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Yetenekler (0 - 100)</span>
+        </div>
+        <div class="card-body" id="skillsBox"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Hayat Dönüm Noktaları</span>
+        </div>
+        <div class="card-body">
+          <ul class="milestone-list" id="milestoneList"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- CENTER COLUMN: LIVE CHART & THOUGHT STREAM -->
+    <section class="col">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Net Değer &amp; Nakit Eğrisi (TL)</span>
+          <span style="font-family:var(--mono);font-size:11px;" id="totalsInfo">Kazanç: 0 ₺ · Harcama: 0 ₺</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap" id="chartWrap"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Canlı Düşünce Akışı &amp; Günlük Kararlar</span>
+          <span style="font-family:var(--mono);font-size:11px;" id="journalCount">0 kayıt</span>
+        </div>
+        <div class="card-body">
+          <div class="journal-list" id="journalList">
+            <div class="empty-state">
+              Ajan henüz ilk gününe başlamadı.<br />
+              Yukarıdan <strong>▶ BAŞLAT</strong> veya <strong>+1 GÜN</strong> düğmesine basarak gözleme başla.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: REAL WORLD DATA, AI CONFIG, OPERATOR EVENT INJECTION -->
+    <section class="col">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Gerçek Dünya Verileri (Salt-Okunur)</span>
+          <button style="padding:3px 8px;font-size:10px;" onclick="refreshWorld()">↻ YENİLE</button>
+        </div>
+        <div class="card-body">
+          <div class="kv-grid" style="margin-top:0;">
+            <div class="kv-box">
+              <div class="kv-label">İstanbul Hava <span id="wLiveTag"></span></div>
+              <div class="kv-val" id="wTemp">--°C</div>
+              <div style="font-size:11px;" id="wCond">--</div>
+            </div>
+            <div class="kv-box">
+              <div class="kv-label">USD / TRY <span id="fxLiveTag"></span></div>
+              <div class="kv-val" id="mUsd">--</div>
+              <div style="font-size:11px;" id="mEur">EUR: --</div>
+            </div>
+            <div class="kv-box">
+              <div class="kv-label">Gram Altın (TL)</div>
+              <div class="kv-val" id="mGold">--</div>
+            </div>
+            <div class="kv-box">
+              <div class="kv-label">BTC / TRY <span id="cLiveTag"></span></div>
+              <div class="kv-val" id="mBtc">--</div>
+              <div style="font-size:11px;" id="mBtcChg">--</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div class="field-label">Gündem Başlıkları <span id="nLiveTag"></span></div>
+            <div id="newsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">AI Model Ayarları (Canlı)</span>
+        </div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div>
+              <label class="field-label">Sağlayıcı</label>
+              <select id="cfgProvider" style="width:100%;" onchange="onProviderPreset()">
+                <option value="demo">Demo Heuristik (API Anahtarsız)</option>
+                <option value="ollama">Ollama (Yerel LLM)</option>
+                <option value="openai">OpenAI / OpenRouter / Groq</option>
+                <option value="gemini">Google Gemini API</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div>
+                <label class="field-label">Model</label>
+                <input id="cfgModel" style="width:100%;" placeholder="qwen2.5:7b" />
+              </div>
+            </div>
+            <div>
+              <label class="field-label">Base URL (Ollama / OpenAI-uyumlu)</label>
+              <input id="cfgBaseUrl" style="width:100%;" placeholder="http://127.0.0.1:11434" />
+            </div>
+            <div>
+              <label class="field-label">API Anahtarı (yalnızca bellek içi)</label>
+              <input id="cfgApiKey" type="password" style="width:100%;" placeholder="sk-... veya AIza..." />
+            </div>
+            <button class="primary" onclick="saveConfig()">AI AYARINI UYGULA</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Operatör Olay Enjeksiyonu</span>
+        </div>
+        <div class="card-body">
+          <div class="preset-row">
+            <button onclick="injectPreset('Telefon ekranı kırıldı', -3500, -10)">📱 Tamir (-3.500₺)</button>
+            <button onclick="injectPreset('Gençlik bursu kazandı', 6000, 15)">🎓 Burs (+6.000₺)</button>
+            <button onclick="injectPreset('Ulaşım zammı geldi', -600, -6)">🚇 Zam (-600₺)</button>
+          </div>
+          <div class="form-grid">
+            <input id="evTitle" placeholder="Özel olay açıklaması..." />
+            <div class="form-row">
+              <input id="evCash" type="number" placeholder="Nakit +/- (₺)" value="-1000" />
+              <input id="evMood" type="number" placeholder="Moral +/-" value="-5" />
+            </div>
+            <button onclick="injectCustomEvent()">OLAYI SİMÜLASYONA GÖNDER</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let currentState = null;
+    let configInitialized = false;
+
+    function fmtTry(v) {
+      return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(Math.round(v)) + ' ₺';
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function renderBar(label, val) {
+      const pct = Math.max(0, Math.min(100, Math.round(val)));
+      return `
+        <div class="bar-row">
+          <div class="bar-label"><span>${label}</span><span>${pct}/100</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
+    }
+
+    function renderChart(history) {
+      const wrap = document.getElementById('chartWrap');
+      if (!history || history.length < 2) {
+        wrap.innerHTML = `<div class="empty-state">Grafik için en az 2 gün verisi bekleniyor...</div>`;
+        return;
+      }
+      const W = 620, H = 165, padL = 54, padR = 14, padT = 14, padB = 24;
+      const vals = history.flatMap(p => [p.net_worth_try, p.cash_try]);
+      let minV = Math.min(...vals, 0);
+      let maxV = Math.max(...vals, 5000);
+      if (maxV - minV < 1000) maxV = minV + 1000;
+
+      const xOf = (i) => padL + (i / (history.length - 1)) * (W - padL - padR);
+      const yOf = (v) => padT + (1 - (v - minV) / (maxV - minV)) * (H - padT - padB);
+
+      const nwPoints = history.map((p, i) => `${xOf(i).toFixed(1)},${yOf(p.net_worth_try).toFixed(1)}`).join(' ');
+      const cashPoints = history.map((p, i) => `${xOf(i).toFixed(1)},${yOf(p.cash_try).toFixed(1)}`).join(' ');
+      const areaPath = `M ${xOf(0).toFixed(1)},${yOf(minV).toFixed(1)} L ${nwPoints.replace(/ /g, ' L ')} L ${xOf(history.length - 1).toFixed(1)},${yOf(minV).toFixed(1)} Z`;
+
+      wrap.innerHTML = `
+        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+          <defs>
+            <pattern id="ht" width="6" height="6" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="1.1" fill="#0038a8" fill-opacity="0.22" />
+            </pattern>
+          </defs>
+          <line x1="${padL}" y1="${padT}" x2="${W - padR}" y2="${padT}" stroke="#0038a8" stroke-opacity="0.2" stroke-dasharray="3 3" />
+          <line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="#0038a8" stroke-opacity="0.45" />
+          <path d="${areaPath}" fill="url(#ht)" />
+          <polyline fill="none" stroke="#0038a8" stroke-width="1.5" stroke-dasharray="4 3" points="${cashPoints}" />
+          <polyline fill="none" stroke="#0038a8" stroke-width="2.5" points="${nwPoints}" />
+          <text x="4" y="${padT + 9}" font-family="monospace" font-size="10" fill="#0038a8">${fmtTry(maxV)}</text>
+          <text x="4" y="${H - padB}" font-family="monospace" font-size="10" fill="#0038a8">${fmtTry(minV)}</text>
+          <text x="${padL}" y="${H - 6}" font-family="monospace" font-size="10" fill="#0038a8">Gün ${history[0].day}</text>
+          <text x="${W - 60}" y="${H - 6}" font-family="monospace" font-size="10" fill="#0038a8">Gün ${history[history.length - 1].day}</text>
+        </svg>`;
+    }
+
+    function render(data) {
+      currentState = data;
+      const { sim, world, llm_config, running, tick_ms } = data;
+
+      document.getElementById('ageBadge').textContent = `YAŞ ${sim.age} · GÜN ${sim.day}`;
+      document.getElementById('dateBadge').textContent = sim.sim_date;
+      document.getElementById('providerBadge').textContent = `BEYİN: ${llm_config.provider.toUpperCase()}`;
+      document.getElementById('statusBanner').textContent = sim.status_banner;
+
+      const btn = document.getElementById('btnToggle');
+      btn.textContent = running ? '⏸ DURAKLAT' : '▶ BAŞLAT';
+      document.getElementById('speedSelect').value = String(tick_ms);
+
+      document.getElementById('avatarAge').textContent = sim.age;
+      document.getElementById('agentName').textContent = sim.agent_name;
+      document.getElementById('agentLocation').textContent = `${sim.city} · ${sim.job_title}`;
+      document.getElementById('agentHousing').textContent = `Barınma: ${sim.housing_name} (${sim.days_in_housing}. gün)`;
+      document.getElementById('aliveBadge').textContent = sim.alive ? (running ? 'ÇALIŞIYOR' : 'HAZIR') : 'SONLANDI';
+
+      document.getElementById('cashVal').textContent = fmtTry(sim.cash_try);
+      document.getElementById('netWorthVal').textContent = fmtTry(sim.net_worth_try);
+      document.getElementById('pUsd').textContent = sim.portfolio.usd.toFixed(2);
+      document.getElementById('pGold').textContent = sim.portfolio.gold_grams.toFixed(2) + 'g';
+      document.getElementById('pBtc').textContent = sim.portfolio.btc.toFixed(5);
+      document.getElementById('totalsInfo').textContent = `Kazanç: ${fmtTry(sim.total_earned_try)} · Harcama: ${fmtTry(sim.total_spent_try)}`;
+
+      document.getElementById('vitalsBox').innerHTML =
+        renderBar('Enerji', sim.vitals.energy) +
+        renderBar('Sağlık', sim.vitals.health) +
+        renderBar('Moral', sim.vitals.mood) +
+        renderBar('Tokluk', sim.vitals.satiety);
+
+      document.getElementById('skillsBox').innerHTML =
+        renderBar('Yazılım', sim.skills.coding) +
+        renderBar('İletişim & Satış', sim.skills.communication) +
+        renderBar('İngilizce', sim.skills.english) +
+        renderBar('Finans', sim.skills.finance) +
+        renderBar('Zanaat / Hizmet', sim.skills.trade);
+
+      document.getElementById('milestoneList').innerHTML = sim.milestones
+        .map(m => `<li>${escapeHtml(m)}</li>`)
+        .join('');
+
+      renderChart(sim.history);
+
+      document.getElementById('journalCount').textContent = `${sim.journal.length} kayıt`;
+      const jBox = document.getElementById('journalList');
+      if (sim.journal.length === 0) {
+        jBox.innerHTML = `<div class="empty-state">Ajan henüz ilk gününe başlamadı.<br />Yukarıdan <strong>▶ BAŞLAT</strong> veya <strong>+1 GÜN</strong> düğmesine basarak gözleme başla.</div>`;
+      } else {
+        jBox.innerHTML = sim.journal.map((e, idx) => {
+          const sign = e.cash_delta_try >= 0 ? '+' : '';
+          return `
+            <article class="entry ${idx === 0 ? 'latest' : ''}">
+              <div class="entry-top">
+                <span><strong>GÜN ${e.day}</strong> · ${e.sim_date} · ${e.age} Yaş</span>
+                <span class="pill solid">${escapeHtml(e.action_label)}</span>
+                <span>${sign}${fmtTry(e.cash_delta_try)}</span>
+              </div>
+              <div class="entry-thought">“${escapeHtml(e.thought)}”</div>
+              <div class="entry-outcome">${escapeHtml(e.outcome)}</div>
+              <div class="entry-foot">
+                <span>Plan: ${escapeHtml(e.plan)}</span>
+                <span>Ruh Hali: #${escapeHtml(e.mood_tag)} · ${escapeHtml(e.provider_used)}</span>
+              </div>
+            </article>`;
+        }).join('');
+      }
+
+      // Real world data
+      document.getElementById('wTemp').textContent = `${world.weather.temperature_c.toFixed(1)}°C`;
+      document.getElementById('wCond').textContent = `${world.weather.condition} · ${world.weather.wind_kmh} km/s`;
+      document.getElementById('wLiveTag').textContent = world.weather.is_live ? '● CANLI' : '○ ÖNBELLEK';
+
+      document.getElementById('mUsd').textContent = `${world.market.usd_try.toFixed(2)} ₺`;
+      document.getElementById('mEur').textContent = `EUR: ${world.market.eur_try.toFixed(2)} ₺`;
+      document.getElementById('fxLiveTag').textContent = world.market.is_fx_live ? '● CANLI' : '○ ÖNBELLEK';
+
+      document.getElementById('mGold').textContent = fmtTry(world.market.gold_gram_try);
+      document.getElementById('mBtc').textContent = fmtTry(world.market.btc_try);
+      const chg = world.market.btc_24h_change;
+      document.getElementById('mBtcChg').textContent = `24s: ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`;
+      document.getElementById('cLiveTag').textContent = world.market.is_crypto_live ? '● CANLI' : '○ ÖNBELLEK';
+
+      document.getElementById('nLiveTag').textContent = world.is_news_live ? '● CANLI RSS' : '○ ÖNBELLEK';
+      document.getElementById('newsList').innerHTML = world.headlines
+        .map(h => `<div class="news-item"><div>${escapeHtml(h.title)}</div><div class="news-src">${escapeHtml(h.source)}</div></div>`)
+        .join('');
+
+      if (!configInitialized) {
+        document.getElementById('cfgProvider').value = llm_config.provider;
+        document.getElementById('cfgModel').value = llm_config.model;
+        document.getElementById('cfgBaseUrl').value = llm_config.base_url;
+        configInitialized = true;
+      }
+    }
+
+    function onProviderPreset() {
+      const p = document.getElementById('cfgProvider').value;
+      const modelEl = document.getElementById('cfgModel');
+      const urlEl = document.getElementById('cfgBaseUrl');
+      if (p === 'ollama') {
+        modelEl.value = 'qwen2.5:7b';
+        urlEl.value = 'http://127.0.0.1:11434';
+      } else if (p === 'openai') {
+        modelEl.value = 'gpt-4o-mini';
+        urlEl.value = 'https://api.openai.com/v1';
+      } else if (p === 'gemini') {
+        modelEl.value = 'gemini-2.0-flash';
+        urlEl.value = 'https://generativelanguage.googleapis.com';
+      } else {
+        modelEl.value = 'heuristic-v1';
+        urlEl.value = '';
+      }
+    }
+
+    async function sendControl(command) {
+      await fetch('/api/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command })
+      });
+    }
+
+    async function toggleRun() {
+      if (!currentState) return;
+      await sendControl(currentState.running ? 'pause' : 'play');
+    }
+
+    async function changeSpeed(ms) {
+      await fetch('/api/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tick_ms: Number(ms) })
+      });
+    }
+
+    async function saveConfig() {
+      const payload = {
+        provider: document.getElementById('cfgProvider').value,
+        model: document.getElementById('cfgModel').value.trim(),
+        base_url: document.getElementById('cfgBaseUrl').value.trim(),
+        api_key: document.getElementById('cfgApiKey').value.trim() || null
+      };
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      alert('AI modeli güncellendi: ' + payload.provider);
+    }
+
+    async function injectPreset(title, cash_delta, mood_delta) {
+      await fetch('/api/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, cash_delta, mood_delta })
+      });
+    }
+
+    async function injectCustomEvent() {
+      const title = document.getElementById('evTitle').value.trim();
+      if (!title) return;
+      const cash_delta = Number(document.getElementById('evCash').value || 0);
+      const mood_delta = Number(document.getElementById('evMood').value || 0);
+      await injectPreset(title, cash_delta, mood_delta);
+      document.getElementById('evTitle').value = '';
+    }
+
+    async function refreshWorld() {
+      await fetch('/api/refresh-world', { method: 'POST' });
+    }
+
+    function connectWs() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      const ws = new WebSocket(`${proto}://${location.host}/ws`);
+      const badge = document.getElementById('wsBadge');
+
+      ws.onopen = () => {
+        badge.innerHTML = '<span class="dot"></span>CANLI AKIŞ';
+      };
+      ws.onmessage = (ev) => {
+        try {
+          render(JSON.parse(ev.data));
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      ws.onclose = () => {
+        badge.innerHTML = '<span class="dot"></span>YENİDEN BAĞLANIYOR';
+        setTimeout(connectWs, 1500);
+      };
+    }
+
+    connectWs();
+  </script>
+</body>
+</html>

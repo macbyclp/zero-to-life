@@ -1,0 +1,16 @@
+[package]
+name = "zero-to-life"
+version = "0.1.0"
+edition = "2021"
+description = "Read-only real-world sandbox life simulation for an autonomous 18-year-old AI agent"
+
+[dependencies]
+axum = { version = "0.7", features = ["ws"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+chrono = { version = "0.4", features = ["serde"] }
+futures-util = "0.3"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
