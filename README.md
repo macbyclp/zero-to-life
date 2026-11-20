@@ -100,7 +100,7 @@ Simülasyon, prompt'u güvenli bir şekilde `stdin` üzerinden UTF-8 olarak ilet
 
 | Mod (`SIM_PROVIDER`) | Kullanılan Varsayılan Komut | Gerekli Kurulum |
 | :--- | :--- | :--- |
-| **`agy-cli`** | `agy -p --disable-slash-commands` | Antigravity CLI (`agy`) kurulu ve oturumu açık olmalı |
+| **`agy-cli`** | `agy --disable-slash-commands --output-format text --print=...` | Antigravity CLI (`agy`) kurulu ve oturumu açık olmalı |
 | **`claude-cli`** | `claude -p` | Claude Code CLI kurulu ve oturumu açık olmalı |
 | **`gemini-cli`** | `gemini -p ""` | Gemini CLI kurulu ve Google hesabıyla giriş yapılmış olmalı |
 | **`codex-cli`** | `codex exec -` | OpenAI Codex CLI kurulu ve oturumu açık olmalı |

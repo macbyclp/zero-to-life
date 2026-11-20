@@ -53,7 +53,7 @@ impl AgentBrain {
     ) -> (AgentDecision, String) {
         let provider = config.provider.trim().to_lowercase();
         match provider.as_str() {
-            "agy-cli" | "agy" => match self.call_subscription_cli("agy-cli", config, state, world).await {
+            "agy-cli" | "agy" => match self.call_agy_cli(config, state, world).await {
                 Ok(d) => (d, "Antigravity CLI (agy · Abonelik)".to_string()),
                 Err(e) => fallback_with_note(state, world, "Antigravity CLI (agy)", &e),
             },
@@ -89,6 +89,66 @@ impl AgentBrain {
         }
     }
 
+    /// Runs Antigravity CLI (`agy`) directly via OS argv (no shell escaping issues)
+    /// using `--disable-slash-commands --output-format text --print=<prompt>`.
+    async fn call_agy_cli(
+        &self,
+        config: &LlmConfig,
+        state: &SimulationState,
+        world: &WorldSnapshot,
+    ) -> Result<AgentDecision, String> {
+        let (system, user) = Self::build_prompts(state, world);
+        let combined_prompt = format!("{}\n\n{}", system, user);
+
+        let mut command = Command::new("agy");
+        command
+            .arg("--disable-slash-commands")
+            .arg("--output-format")
+            .arg("text");
+
+        let model = config.model.trim();
+        if !model.is_empty() && model != "default" && model != "heuristic-v1" {
+            command.arg("--model").arg(model);
+        }
+
+        command
+            .arg(format!("--print={}", combined_prompt))
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true);
+
+        let child = command
+            .spawn()
+            .map_err(|e| format!("agy başlatılamadı: {}", e))?;
+
+        let output = tokio::time::timeout(Duration::from_secs(90), child.wait_with_output())
+            .await
+            .map_err(|_| "agy zaman aşımı (90s)".to_string())?
+            .map_err(|e| format!("agy çalıştırma hatası: {}", e))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+        if !output.status.success() && stdout.is_empty() {
+            let err_short: String = stderr.chars().take(180).collect();
+            return Err(format!(
+                "Çıkış kodu {}: {}",
+                output.status.code().unwrap_or(-1),
+                if err_short.is_empty() {
+                    "agy yanıt vermedi".to_string()
+                } else {
+                    err_short
+                }
+            ));
+        }
+
+        parse_decision_json(&stdout).map_err(|_| {
+            let preview: String = stdout.chars().take(160).collect();
+            format!("JSON çözülemedi. Çıktı: {}", preview)
+        })
+    }
+
     /// Runs subscription-based local CLI agents (Claude Code, Gemini CLI, Codex CLI, or custom CMD)
     /// without needing raw API keys. Pipes the full prompt over stdin to safely support Turkish UTF-8
     /// and avoid Windows command-line length/escaping limits.
@@ -103,15 +163,6 @@ impl AgentBrain {
         let combined_prompt = format!("{}\n\n{}\n", system, user);
 
         let cmd_str = match kind {
-            "agy-cli" => {
-                if !config.cli_command.trim().is_empty() {
-                    config.cli_command.trim().to_string()
-                } else if !config.model.trim().is_empty() && config.model != "default" {
-                    format!("agy -p --disable-slash-commands --model {}", config.model.trim())
-                } else {
-                    "agy -p --disable-slash-commands".to_string()
-                }
-            }
             "claude-cli" => {
                 if !config.cli_command.trim().is_empty() {
                     config.cli_command.trim().to_string()
@@ -176,9 +227,9 @@ impl AgentBrain {
             drop(stdin);
         }
 
-        let output = tokio::time::timeout(Duration::from_secs(45), child.wait_with_output())
+        let output = tokio::time::timeout(Duration::from_secs(90), child.wait_with_output())
             .await
-            .map_err(|_| "CLI zaman aşımı (45s)".to_string())?
+            .map_err(|_| "CLI zaman aşımı (90s)".to_string())?
             .map_err(|e| format!("CLI çalıştırma hatası: {}", e))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
